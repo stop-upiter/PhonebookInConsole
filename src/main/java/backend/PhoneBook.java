@@ -2,13 +2,18 @@ package backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static backend.FormatDataChecker.transformStringForSearch;
 
 /**
  * Телефонная книжечка.
@@ -25,7 +30,6 @@ public class PhoneBook {
 
     /**
      * Конструктор книжечки.
-     *
      * @param path путь к данным книжечки.
      * @throws IOException          если не получится десериализовать файл.
      * @throws NullPointerException если путь пуст или null.
@@ -38,9 +42,23 @@ public class PhoneBook {
 
         file = new File(path);
         mapper = new ObjectMapper();
+        contacts = new ArrayList<>();
         deserialize();
     }
 
+    /**
+     * Добавить контакт.
+     *
+     * @param name         имя.
+     * @param surname      фамилия.
+     * @param patronymic   отчество.
+     * @param address      адрес.
+     * @param phoneNumbers номера телефонов.
+     * @param birthday     день рождения.
+     * @param email        адрес электронной почты.
+     * @return получилось ли создать контакт.
+     * @throws IOException
+     */
     public boolean addContact(final String name, final String surname, final String patronymic,
                               String address, List<String> phoneNumbers,
                               LocalDate birthday, String email) throws IOException {
@@ -63,13 +81,25 @@ public class PhoneBook {
         return true;
     }
 
+    /**
+     * Удалить контакт из книги.
+     *
+     * @param hater контакт для удаления.
+     * @throws IOException
+     */
     public void deleteContact(Contact hater) throws IOException {
         contacts.remove(hater);
         serialize();
     }
 
+    /**
+     * Найти среди контактов по началу ФИО.
+     *
+     * @param startOfName начало ФИО.
+     * @return список подходящих контактов.
+     */
     public List<Contact> findByFullName(String startOfName) {
-        return find(new Predicate<Contact>() {
+        return find(new Predicate<>() {
             final String startWithIt = transformStringForSearch(startOfName);
 
             @Override
@@ -82,8 +112,14 @@ public class PhoneBook {
         });
     }
 
+    /**
+     * Найти среди контактов по началу номера телефона.
+     *
+     * @param startOfNumber начало номера телефона.
+     * @return список подходящих контактов.
+     */
     public List<Contact> findByPhoneNumber(String startOfNumber) {
-        return find(new Predicate<Contact>() {
+        return find(new Predicate<>() {
             final String startWithIt = transformStringForSearch(startOfNumber);
 
             @Override
@@ -100,49 +136,67 @@ public class PhoneBook {
         });
     }
 
-    //todo
+    /**
+     * Найти среди контактов по дате рождения.
+     *
+     * @param date дата рождения.
+     * @return список подходящих контактов.
+     */
     public List<Contact> findByBirthday(final LocalDate date) {
         return find(new Predicate<>() {
             @Override
             public boolean test(Contact contact) {
-                if (contact.getBirthday().isEmpty()){
+                if (contact.getBirthday().isEmpty()) {
                     return false;
-                }
-                else {
+                } else {
                     return contact.getBirthday().get().equals(date);
                 }
             }
         });
     }
 
+    /**
+     * Получить список всех контактов книги.
+     *
+     * @return все контакты книги.
+     */
     public List<Contact> getAllContacts() {
         return new ArrayList<>(contacts);
     }
 
+    /**
+     * Найти контакты с помощью предиката.
+     *
+     * @param conditionForSearch условие для выбора подходящих контактов.
+     * @return список подходящих контактов.
+     */
     private List<Contact> find(Predicate<Contact> conditionForSearch) {
         return contacts.stream().
                 filter(conditionForSearch).
                 collect(Collectors.toList());
     }
 
-    private String transformStringForSearch(String str) {
-        return str.replaceAll("\\s+", "")
-                .replaceAll("\\W", "")
-                .toLowerCase();
-    }
-
+    /**
+     * Сериализовать текущий список контактов.
+     *
+     * @throws IOException при ошибке сериализации.
+     */
     private void serialize() throws IOException {
         try (FileWriter writer = new FileWriter(file, false)) {
             mapper.writeValue(writer, contacts);
         }
     }
 
+    /**
+     * Десериализовать контакты для книги.
+     *
+     * @throws IOException при ошибки десериализации.
+     */
     @SuppressWarnings("unchecked")
     private void deserialize() throws IOException {
         if (!file.createNewFile()) {
             try (FileReader reader = new FileReader(file)) {
-                contacts = (ArrayList<Contact>) (mapper.readValue(reader, ArrayList.class).stream().
-                        filter(o -> o.getClass().equals(Contact.class)).collect(Collectors.toList()));
+                contacts = new ArrayList<Contact>(mapper.readValue(reader, /*new TypeReference<List<Contact>>() { }*/ contacts.getClass()));
             }
         }
     }
