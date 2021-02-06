@@ -1,4 +1,4 @@
-package frontend;
+package frontend.console;
 
 import backend.PhoneBook;
 
@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.util.Scanner;
 
 public class Program {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         //todo logger
         PhoneBook phoneBook = null;
         String path = "../../../phonebook.json";
@@ -32,7 +32,7 @@ public class Program {
         } while (readAgain);
 
         TextConsole textConsole = new TextConsole(phoneBook);
-        textConsole.start();
+        textConsole.run();
 
         end();
     }
